@@ -29,9 +29,13 @@ def test_full_event_with_all_subobjects_is_valid():
         source="sysmon",
         event_id="1",
         event_type="process_creation",
-        process=ProcessInfo(name="powershell.exe", pid=1234, ppid=1000, command_line="powershell -enc ..."),
+        process=ProcessInfo(
+            name="powershell.exe", pid=1234, ppid=1000, command_line="powershell -enc ..."
+        ),
         file=FileInfo(path="C:\\Temp\\payload.exe", hash_sha256="abc123"),
-        network=NetworkInfo(source_ip="10.0.0.5", destination_ip="8.8.8.8", destination_port=443, protocol="tcp"),
+        network=NetworkInfo(
+            source_ip="10.0.0.5", destination_ip="8.8.8.8", destination_port=443, protocol="tcp"
+        ),
         raw_event={"raw": "data"},
     )
     assert event.process.name == "powershell.exe"
