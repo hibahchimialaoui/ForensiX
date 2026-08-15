@@ -5,7 +5,7 @@ description = "Evidence-driven Digital Forensics & Incident Response platform"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-dependencies = ["fastapi>=0.115", "uvicorn[standard]>=0.32"]
+dependencies = ["fastapi>=0.115", "uvicorn[standard]>=0.32", "python-evtx>=0.8"]
 
 [project.optional-dependencies]
 dev = [
