@@ -218,3 +218,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Downloaded test fixtures (not vendored, see scripts/download_test_dataset.py)
+tests/fixtures/

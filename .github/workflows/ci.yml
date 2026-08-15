@@ -44,8 +44,12 @@ jobs:
       - name: Run database migrations
         run: python -m alembic upgrade head
 
+      - name: Download test dataset fixture
+        run: python scripts/download_test_dataset.py
+
       - name: Lint with ruff
         run: ruff check .
 
       - name: Run tests
         run: pytest --cov=forensix --cov-report=term-missing
+
