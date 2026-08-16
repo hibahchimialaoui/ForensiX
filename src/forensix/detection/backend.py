@@ -63,6 +63,7 @@ class ForensixPostgresBackend(TextQueryBackend):
     field_null_expression = "{field} IS NULL"
     unbound_value_str_expression = "'{value}'"
     unbound_value_num_expression = "{value}"
+    group_expression = "({expr})"
 
 
 def _build_pipeline() -> ProcessingPipeline:
@@ -78,3 +79,4 @@ def compile_rule_to_where_clause(rule_yaml: str) -> str:
     backend = ForensixPostgresBackend(processing_pipeline=_build_pipeline())
     queries = backend.convert(rule_collection)
     return queries[0].strip()
+
