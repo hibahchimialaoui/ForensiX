@@ -1,8 +1,12 @@
-﻿"""Repository functions for persisting NormalizedEvent instances to the Event Store."""
+﻿"""Repository functions for persisting NormalizedEvent and Sigma detections."""
+
+import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
-from forensix.models.db import EventRecord
+from forensix.detection.executor import RuleMatch
+from forensix.models.db import DetectionRecord, EventRecord
 from forensix.models.event import NormalizedEvent
 
 
@@ -38,4 +42,34 @@ def bulk_insert_events(session: Session, events: list[NormalizedEvent]) -> int:
     records = [_to_record(event) for event in events]
     session.bulk_save_objects(records)
     session.commit()
+    return len(records)
+
+
+def persist_detections(session: Session, rule_matches: list[RuleMatch]) -> int:
+    """Persist matched events as DetectionRecord rows, one per (rule, event) pair.
+
+    Rule matches with an error (M2-03) are skipped - only successful matches
+    produce detections, preserving the link Detection -> Event -> Raw Evidence.
+    Returns the number of detections inserted.
+    """
+    records = []
+    for match in rule_matches:
+        if match.error is not None:
+            continue
+        for event_id in match.matched_event_ids:
+            metadata = {"rule_file": match.rule_file, "where_clause": match.where_clause}
+            records.append(
+                DetectionRecord(
+                    id=str(uuid.uuid4()),
+                    rule_id=match.rule_id,
+                    event_id=event_id,
+                    timestamp=datetime.now(UTC),
+                    severity=match.severity,
+                    detection_status="new",
+                    detection_metadata=metadata,
+                )
+            )
+    if records:
+        session.bulk_save_objects(records)
+        session.commit()
     return len(records)

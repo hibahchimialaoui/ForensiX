@@ -9,6 +9,7 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from sigma.collection import SigmaCollection
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -31,6 +32,8 @@ class RuleMatch:
     """Result of running one curated rule against the current Event Store content."""
 
     rule_file: str
+    rule_id: str = ""
+    severity: str = "unknown"
     where_clause: str = ""
     matched_event_ids: list[str] = field(default_factory=list)
     error: str | None = None
@@ -39,6 +42,19 @@ class RuleMatch:
 def load_rule_files() -> list[Path]:
     """Return the curated Sigma rule files selected in M2-02."""
     return sorted(RULES_DIR.glob("*.yml"))
+
+
+def get_rule_metadata(rule_yaml: str) -> tuple[str, str]:
+    """Extract the Sigma rule id and severity level (e.g. 'high') from rule YAML.
+
+    Parsed separately from compile_rule_to_where_clause because pySigma's
+    conversion step consumes the rule without exposing id/level on the result.
+    """
+    rule_collection = SigmaCollection.from_yaml(rule_yaml)
+    rule = rule_collection.rules[0]
+    rule_id = str(rule.id) if rule.id else "unknown"
+    severity = rule.level.name.lower() if rule.level else "unknown"
+    return rule_id, severity
 
 
 def quote_event_id_literals(where_clause: str) -> str:
@@ -74,9 +90,14 @@ def run_all_rules(session: Session) -> list[RuleMatch]:
     results = []
     for rule_file in load_rule_files():
         rule_yaml = rule_file.read_text(encoding="utf-8")
+        rule_id, severity = get_rule_metadata(rule_yaml)
         try:
             where_clause, matched_ids = execute_rule(session, rule_yaml)
-            results.append(RuleMatch(rule_file.name, where_clause, matched_ids))
+            results.append(
+                RuleMatch(rule_file.name, rule_id, severity, where_clause, matched_ids)
+            )
         except Exception as e:
-            results.append(RuleMatch(rule_file.name, error=f"{type(e).__name__}: {e}"))
+            results.append(
+                RuleMatch(rule_file.name, rule_id, severity, error=f"{type(e).__name__}: {e}")
+            )
     return results

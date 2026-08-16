@@ -7,7 +7,7 @@ by process_pid) - needed by the Correlation Engine in Milestone 3.
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Integer, String
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -42,3 +42,19 @@ class EventRecord(Base):
     network_protocol: Mapped[str | None] = mapped_column(String, nullable=True)
 
     raw_event: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+class DetectionRecord(Base):
+    """Database row for a single Sigma rule detection, linked to its source event."""
+
+    __tablename__ = "detections"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    rule_id: Mapped[str] = mapped_column(String, index=True)
+    event_id: Mapped[str] = mapped_column(
+        String, ForeignKey("events.id"), index=True
+    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    severity: Mapped[str] = mapped_column(String, index=True)
+    detection_status: Mapped[str] = mapped_column(String, default="new")
+    detection_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
