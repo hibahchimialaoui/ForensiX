@@ -1,4 +1,4 @@
-﻿# Detection Backend (pySigma -> ForensiX Event Store)
+# Detection Backend (pySigma -> ForensiX Event Store)
 
 ## Chaine de transformation
 
@@ -37,8 +37,9 @@ Seuls les operateurs suivants sont implementes et testes :
 - Egalite simple (`field: value`)
 - Wildcard / contains / startswith / endswith (traduits en `LIKE`)
 - AND / OR / NOT / IS NULL
+- Plages CIDR (`|cidr`), decomposees automatiquement par pySigma en clauses LIKE equivalentes pour les plages alignees sur des limites d'octet - verifie empiriquement en M2-02
 
-Non implementes : expressions regulieres (`|re`), plages CIDR (`|cidr`), comparaisons champ-a-champ, et toutes les fonctionnalites de correlation Sigma (hors scope MVP-A).
+Non implementes : expressions regulieres (`|re`), comparaisons champ-a-champ, et toutes les fonctionnalites de correlation Sigma (hors scope MVP-A).
 
 ### 3. Pas de gestion de la casse
 
@@ -48,3 +49,6 @@ Les comparaisons `LIKE` generees sont sensibles a la casse par defaut sous Postg
 
 Le backend produit un fragment de texte SQL (`"col" LIKE 'valeur'`) plutot qu'une structure SQLAlchemy `Query.filter()` composable. Ce choix est acceptable ici car les noms de colonnes generes proviennent uniquement de notre `FIELD_MAPPING` fixe (jamais d'un champ arbitraire fourni par une regle Sigma non validee), ce qui elimine le risque d'injection via les noms de colonnes. Les valeurs elles-memes restent quotees par pySigma. A revalider si le mapping devient un jour dynamique ou controle par un tiers.
 
+### 5. Bug trouve et corrige en M2-02 : group_expression manquant
+
+Le premier jeu de tests M2-01 (2 regles simples, sans liste de valeurs) n'exercait jamais de regroupement entre parentheses. En testant 7 regles reelles en M2-02, 5 ont echoue avec l'erreur "Group expressions are not supported by the backend". Cause : l'attribut group_expression n'etait pas defini sur ForensixPostgresBackend. Corrige par l'ajout de group_expression = "({expr})". Lecon retenue : des tests unitaires qui ne couvrent que des cas simples peuvent donner une fausse confiance ; verifier sur des regles reelles et variees reste necessaire avant de considerer un backend pret.
