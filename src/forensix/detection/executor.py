@@ -86,6 +86,13 @@ def run_all_rules(session: Session) -> list[RuleMatch]:
     A rule that fails (e.g. references an unmapped field) does not abort the
     batch: its error is captured in RuleMatch.error, and execution continues
     with the next rule.
+
+    Note: this only runs detection in memory. Callers that need results
+    persisted to the Detection Store (e.g. Milestone 3 correlation, which
+    reads DetectionRecord rows) must use run_and_persist_detections()
+    instead, or explicitly call forensix.repository.persist_detections()
+    themselves - added after a portfolio review flagged that this
+    distinction was too easy to miss.
     """
     results = []
     for rule_file in load_rule_files():
@@ -101,3 +108,18 @@ def run_all_rules(session: Session) -> list[RuleMatch]:
                 RuleMatch(rule_file.name, rule_id, severity, error=f"{type(e).__name__}: {e}")
             )
     return results
+
+
+def run_and_persist_detections(session: Session) -> tuple[list[RuleMatch], int]:
+    """Run all curated rules and persist the resulting detections in one call.
+
+    This is the entry point future callers (Milestone 3 onward) should use:
+    it guarantees that matches produced by run_all_rules() are never left
+    unpersisted. Returns the raw RuleMatch results (for logging/inspection)
+    and the number of DetectionRecord rows inserted.
+    """
+    from forensix.repository import persist_detections
+
+    results = run_all_rules(session)
+    inserted_count = persist_detections(session, results)
+    return results, inserted_count

@@ -82,3 +82,31 @@ def test_persist_detections_skips_errored_rule_matches(db_session):
 
 def test_persist_detections_returns_zero_for_empty_matches(db_session):
     assert persist_detections(db_session, []) == 0
+
+def test_run_and_persist_detections_ties_execution_and_storage_together(db_session):
+    """The orchestrator (added after a portfolio review flagged the gap
+    between in-memory RuleMatch and persisted DetectionRecord) must run
+    all rules and persist matches in a single call."""
+    from forensix.detection.executor import run_and_persist_detections
+
+    event = NormalizedEvent(
+        id="m204-orchestrator-1",
+        timestamp="2026-08-16T10:00:00",
+        host="M2-04-TEST",
+        source="sysmon",
+        event_id="1",
+        event_type="sysmon_event",
+        process=ProcessInfo(name="C:\\Perflogs\\evil.exe"),
+    )
+    bulk_insert_events(db_session, [event])
+
+    results, inserted_count = run_and_persist_detections(db_session)
+    assert len(results) == 7
+    assert inserted_count >= 1
+
+    detection = (
+        db_session.query(DetectionRecord)
+        .filter(DetectionRecord.event_id == "m204-orchestrator-1")
+        .first()
+    )
+    assert detection is not None
