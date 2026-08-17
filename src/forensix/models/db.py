@@ -58,3 +58,20 @@ class DetectionRecord(Base):
     detection_status: Mapped[str] = mapped_column(String, default="new")
     detection_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
+
+class IncidentCluster(Base):
+    """Stable identifier for a group of correlated events (M3-02 clustering output).
+
+    PostgreSQL is the source of truth; the NetworkX graph is a derived
+    analytical view, reconstructed on demand from event_ids. This table
+    provides a stable cluster_id that M4 (Timeline + ATT&CK) and later
+    milestones can reference without re-running the clustering algorithm.
+    """
+
+    __tablename__ = "incident_clusters"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    event_ids: Mapped[list] = mapped_column(JSON)
+    detection_ids: Mapped[list] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    correlation_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
