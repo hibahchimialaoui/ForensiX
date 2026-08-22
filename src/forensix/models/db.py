@@ -75,3 +75,17 @@ class IncidentCluster(Base):
     detection_ids: Mapped[list] = mapped_column(JSON, default=list)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
     correlation_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+class HostContext(Base):
+    """Independent host criticality/context, orthogonal to detection severity (M5-03).
+
+    Never derived automatically from severity: a given severity can coexist
+    with any host criticality. A host with no row here defaults to
+    'unknown' criticality (see forensix.risk.criticality).
+    """
+
+    __tablename__ = "host_context"
+
+    host: Mapped[str] = mapped_column(String, primary_key=True)
+    criticality: Mapped[str] = mapped_column(String, index=True)
+    context_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
