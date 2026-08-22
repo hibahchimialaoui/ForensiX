@@ -7,7 +7,7 @@ by process_pid) - needed by the Correlation Engine in Milestone 3.
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -89,3 +89,31 @@ class HostContext(Base):
     host: Mapped[str] = mapped_column(String, primary_key=True)
     criticality: Mapped[str] = mapped_column(String, index=True)
     context_metadata: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+
+class RiskAssessmentRecord(Base):
+    """Persisted risk assessment (M5-04) for a detection, linked to its source.
+
+    override_* columns are reserved for M6 (analyst review) and remain
+    unused in M5 - prepared now so M6 does not require a schema migration
+    just to add analyst correction capability.
+    """
+
+    __tablename__ = "risk_assessments"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    detection_id: Mapped[str] = mapped_column(
+        String, ForeignKey("detections.id"), index=True
+    )
+    confidence: Mapped[float] = mapped_column(Float)
+    severity: Mapped[str] = mapped_column(String)
+    host_criticality: Mapped[str] = mapped_column(String)
+    risk_score: Mapped[float] = mapped_column(Float, index=True)
+    risk_category: Mapped[str] = mapped_column(String, index=True)
+    priority: Mapped[str] = mapped_column(String, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    # Reserved for M6 - not used in M5.
+    override_risk_category: Mapped[str | None] = mapped_column(String, nullable=True)
+    override_priority: Mapped[str | None] = mapped_column(String, nullable=True)
+    override_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
