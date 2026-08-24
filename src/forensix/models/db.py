@@ -117,3 +117,24 @@ class RiskAssessmentRecord(Base):
     override_priority: Mapped[str | None] = mapped_column(String, nullable=True)
     override_reason: Mapped[str | None] = mapped_column(String, nullable=True)
 
+
+class AuditLogEntry(Base):
+    """Append-only, hash-chained audit log entry (M7-01).
+
+    Each entry's hash covers its own data plus the previous entry's hash,
+    so altering any past entry breaks the chain for every entry after it -
+    detectable at verification, not physically prevented (tamper-evident,
+    never described as tamper-proof/infalsifiable).
+    """
+
+    __tablename__ = "audit_log"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True)
+    sequence_number: Mapped[int] = mapped_column(Integer, index=True, unique=True)
+    entity_type: Mapped[str] = mapped_column(String, index=True)
+    entity_id: Mapped[str] = mapped_column(String, index=True)
+    action: Mapped[str] = mapped_column(String)
+    data_snapshot: Mapped[dict] = mapped_column(JSON)
+    previous_hash: Mapped[str] = mapped_column(String)
+    entry_hash: Mapped[str] = mapped_column(String, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
