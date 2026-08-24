@@ -80,3 +80,43 @@ def append_audit_entry(
 def audit_log_count(session: Session) -> int:
     """Return the total number of entries in the audit log."""
     return session.query(func.count(AuditLogEntry.id)).scalar() or 0
+
+def get_audit_entries_for_entity(session: Session, entity_id: str) -> list[AuditLogEntry]:
+    """Return all audit entries related to a given entity, ordered chronologically."""
+    return (
+        session.query(AuditLogEntry)
+        .filter(AuditLogEntry.entity_id == entity_id)
+        .order_by(AuditLogEntry.sequence_number)
+        .all()
+    )
+
+
+def verify_chain_integrity(session: Session) -> tuple[bool, int | None]:
+    """Walk the entire audit log and recompute each entry's hash.
+
+    Returns (True, None) if the chain is intact, or (False, sequence_number)
+    identifying the first entry where the stored hash no longer matches the
+    recomputed hash - detectable evidence of tampering, per M7-01's
+    tamper-evident (not tamper-proof) guarantee.
+    """
+    entries = session.query(AuditLogEntry).order_by(AuditLogEntry.sequence_number).all()
+
+    expected_previous_hash = GENESIS_HASH
+    for entry in entries:
+        if entry.previous_hash != expected_previous_hash:
+            return False, entry.sequence_number
+
+        recomputed = _compute_entry_hash(
+            entry.sequence_number,
+            entry.entity_type,
+            entry.entity_id,
+            entry.action,
+            entry.data_snapshot,
+            entry.previous_hash,
+        )
+        if recomputed != entry.entry_hash:
+            return False, entry.sequence_number
+
+        expected_previous_hash = entry.entry_hash
+
+    return True, None
