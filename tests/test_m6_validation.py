@@ -5,7 +5,6 @@ import pytest
 from forensix.db import SessionLocal
 from forensix.detection.executor import run_and_persist_detections
 from forensix.models.db import DetectionRecord, EventRecord, HostContext, RiskAssessmentRecord
-from forensix.repository import bulk_insert_events
 from forensix.reporting.export import export_report_to_markdown
 from forensix.reporting.report import generate_investigation_report
 from forensix.reporting.validation import (
@@ -14,6 +13,7 @@ from forensix.reporting.validation import (
     build_scenario_1_event,
     build_scenario_2_event,
 )
+from forensix.repository import bulk_insert_events
 from forensix.risk.criticality import set_host_criticality
 from forensix.risk.override import apply_analyst_override
 from forensix.risk.pipeline import assess_detection_risk
